@@ -16,6 +16,12 @@ import {
   getUtxosBatch,
   getAddressTransactionsPage,
   getAddressesActive,
+  getAddressName,
+  getTopAddresses,
+  getAddressDistribution,
+  getActiveAddressesCount,
+  getActiveAddressesCountHistory,
+  getAddressNames,
   KaspaClientError,
   type UtxoResponse,
 } from "./kaspa-client.js";
@@ -328,6 +334,105 @@ server.tool(
       }));
       return {
         content: [{ type: "text", text: JSON.stringify({ results }, null, 2) }],
+      };
+    } catch (err) {
+      return formatError(err);
+    }
+  },
+);
+
+server.tool(
+  "get_address_name",
+  {
+    address: z.string().describe("Kaspa mainnet address"),
+  },
+  async ({ address }) => {
+    try {
+      const data = await getAddressName(address);
+      if (!data) {
+        return {
+          content: [{ type: "text", text: JSON.stringify({ address, name: null }) }],
+        };
+      }
+      return {
+        content: [{ type: "text", text: JSON.stringify({ address, name: data.name }) }],
+      };
+    } catch (err) {
+      return formatError(err);
+    }
+  },
+);
+
+server.tool(
+  "get_top_addresses",
+  {},
+  async () => {
+    try {
+      const data = await getTopAddresses();
+      return {
+        content: [{ type: "text", text: JSON.stringify(data, null, 2) }],
+      };
+    } catch (err) {
+      return formatError(err);
+    }
+  },
+);
+
+server.tool(
+  "get_address_distribution",
+  {},
+  async () => {
+    try {
+      const data = await getAddressDistribution();
+      return {
+        content: [{ type: "text", text: JSON.stringify(data, null, 2) }],
+      };
+    } catch (err) {
+      return formatError(err);
+    }
+  },
+);
+
+server.tool(
+  "get_active_addresses_count",
+  {},
+  async () => {
+    try {
+      const data = await getActiveAddressesCount();
+      return {
+        content: [{ type: "text", text: JSON.stringify(data, null, 2) }],
+      };
+    } catch (err) {
+      return formatError(err);
+    }
+  },
+);
+
+server.tool(
+  "get_active_addresses_count_history",
+  {
+    dayOrMonth: z.string().regex(/^\d{4}-\d{2}(-\d{2})?$/).describe("UTC day (YYYY-MM-DD) or month (YYYY-MM)"),
+  },
+  async ({ dayOrMonth }) => {
+    try {
+      const entries = await getActiveAddressesCountHistory(dayOrMonth);
+      return {
+        content: [{ type: "text", text: JSON.stringify({ dayOrMonth, count: entries.length, entries }, null, 2) }],
+      };
+    } catch (err) {
+      return formatError(err);
+    }
+  },
+);
+
+server.tool(
+  "get_address_names",
+  {},
+  async () => {
+    try {
+      const data = await getAddressNames();
+      return {
+        content: [{ type: "text", text: JSON.stringify(data, null, 2) }],
       };
     } catch (err) {
       return formatError(err);

@@ -272,3 +272,83 @@ export async function getAddressesActive(
 ): Promise<AddressesActiveResponse[]> {
   return postJson<AddressesActiveResponse[]>("/addresses/active", { addresses });
 }
+
+// --- Low-priority address tools ---
+
+export interface AddressNameResponse {
+  name: string;
+}
+
+export async function getAddressName(address: string): Promise<AddressNameResponse | null> {
+  try {
+    return await fetchJson<AddressNameResponse>(`/addresses/${address}/name`);
+  } catch (err) {
+    if (err instanceof KaspaClientError && err.statusCode === 404) {
+      return null;
+    }
+    throw err;
+  }
+}
+
+export interface TopAddressEntry {
+  rank: number;
+  address: string;
+  amount: number;
+}
+
+export interface TopAddressesResponse {
+  timestamp: number;
+  ranking: TopAddressEntry[];
+}
+
+export async function getTopAddresses(): Promise<TopAddressesResponse[]> {
+  return fetchJson<TopAddressesResponse[]>("/addresses/top");
+}
+
+export interface DistributionTier {
+  tier: number;
+  count: number;
+  amount: number;
+}
+
+export interface AddressDistributionResponse {
+  timestamp: number;
+  tiers: DistributionTier[];
+}
+
+export async function getAddressDistribution(): Promise<AddressDistributionResponse[]> {
+  return fetchJson<AddressDistributionResponse[]>("/addresses/distribution");
+}
+
+export interface ActiveAddressesCountResponse {
+  timestamp: number;
+  dateTime: string;
+  count: number;
+}
+
+export async function getActiveAddressesCount(): Promise<ActiveAddressesCountResponse> {
+  return fetchJson<ActiveAddressesCountResponse>("/addresses/active/count/");
+}
+
+export interface ActiveAddressesCountHistoryEntry {
+  timestamp: number;
+  dateTime: string;
+  count: number;
+}
+
+export async function getActiveAddressesCountHistory(
+  dayOrMonth: string,
+): Promise<ActiveAddressesCountHistoryEntry[]> {
+  return fetchJson<ActiveAddressesCountHistoryEntry[]>(
+    `/addresses/active/count/${dayOrMonth}`,
+  );
+}
+
+export interface AddressNameEntry {
+  address: string;
+  name: string;
+}
+
+export async function getAddressNames(): Promise<AddressNameEntry[]> {
+  return fetchJson<AddressNameEntry[]>("/addresses/names");
+}
