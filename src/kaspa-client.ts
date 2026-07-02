@@ -480,3 +480,167 @@ export async function getTransactionCountHistory(
 ): Promise<TransactionCountResult[]> {
   return fetchJson<TransactionCountResult[]>(`/transactions/count/${dayOrMonth}`);
 }
+
+// --- Block endpoints ---
+
+export interface ParentHashModel {
+  parentHash: string;
+}
+
+export interface BlockHeader {
+  version: number;
+  hashMerkleRoot: string;
+  acceptedIdMerkleRoot: string;
+  utxoCommitment: string;
+  timestamp: string;
+  bits: number;
+  nonce: string;
+  daaScore: string;
+  blueWork: string;
+  blueScore: string;
+  pruningPoint: string;
+  parents: ParentHashModel[];
+}
+
+export interface BlockVerboseData {
+  hash: string;
+  difficulty: number;
+  selectedParentHash: string;
+  transactionIds: string[];
+  blueScore: string;
+  childrenHashes: string[];
+  mergeSetBluesHashes: string[];
+  mergeSetRedsHashes: string[];
+  isChainBlock: boolean;
+}
+
+export interface BlockExtra {
+  color?: string;
+  minerAddress?: string;
+  minerInfo?: string;
+}
+
+export interface BlockModel {
+  header: BlockHeader;
+  transactions?: unknown[];
+  verboseData: BlockVerboseData;
+  extra?: BlockExtra;
+}
+
+export interface BlockListResponse {
+  blockHashes: string[];
+  blocks?: BlockModel[];
+}
+
+export async function getBlock(
+  blockId: string,
+  includeTransactions = true,
+  includeColor = false,
+): Promise<BlockModel> {
+  return fetchJson<BlockModel>(
+    `/blocks/${blockId}?includeTransactions=${includeTransactions}&includeColor=${includeColor}`,
+  );
+}
+
+export async function getBlocks(
+  lowHash: string,
+  includeBlocks = false,
+  includeTransactions = false,
+): Promise<BlockListResponse> {
+  return fetchJson<BlockListResponse>(
+    `/blocks?lowHash=${lowHash}&includeBlocks=${includeBlocks}&includeTransactions=${includeTransactions}`,
+  );
+}
+
+export async function getBlocksFromBluescore(
+  params: { blueScore?: number; blueScoreGte?: number; blueScoreLt?: number },
+  includeTransactions = false,
+): Promise<BlockModel[]> {
+  let path = `/blocks-from-bluescore?includeTransactions=${includeTransactions}`;
+  if (params.blueScore !== undefined) path += `&blueScore=${params.blueScore}`;
+  if (params.blueScoreGte !== undefined) path += `&blueScoreGte=${params.blueScoreGte}`;
+  if (params.blueScoreLt !== undefined) path += `&blueScoreLt=${params.blueScoreLt}`;
+  return fetchJson<BlockModel[]>(path);
+}
+
+// --- Info endpoints ---
+
+export interface BlockdagResponse {
+  networkName: string;
+  blockCount: number;
+  headerCount: number;
+  tipHashes: string[];
+  difficulty: number;
+  pastMedianTime: number;
+  virtualParentHashes: string[];
+  pruningPointHash: string;
+  virtualDaaScore: number;
+  sink: string;
+}
+
+export interface HashrateResponse {
+  hashrate: number;
+}
+
+export interface CoinSupplyResponse {
+  circulatingSupply: string;
+  maxSupply: string;
+}
+
+export interface PriceResponse {
+  price: number;
+}
+
+export interface BlockRewardResponse {
+  blockreward: number;
+}
+
+export interface HalvingResponse {
+  nextHalvingTimestamp: number;
+  nextHalvingDate: string;
+  nextHalvingAmount: number;
+}
+
+export interface KaspadInfoResponse {
+  mempoolSize: string;
+  serverVersion: string;
+  isUtxoIndexed: boolean;
+  isSynced: boolean;
+  p2pIdHashed: string;
+}
+
+export interface BlueScoreResponse {
+  blueScore: number;
+}
+
+export async function getBlockdagInfo(): Promise<BlockdagResponse> {
+  return fetchJson<BlockdagResponse>("/info/blockdag");
+}
+
+export async function getHashrate(): Promise<HashrateResponse> {
+  return fetchJson<HashrateResponse>("/info/hashrate");
+}
+
+export async function getCoinSupply(): Promise<CoinSupplyResponse> {
+  return fetchJson<CoinSupplyResponse>("/info/coinsupply");
+}
+
+export async function getPrice(): Promise<PriceResponse> {
+  return fetchJson<PriceResponse>("/info/price");
+}
+
+export async function getBlockReward(): Promise<BlockRewardResponse> {
+  return fetchJson<BlockRewardResponse>("/info/blockreward");
+}
+
+export async function getHalvingInfo(): Promise<HalvingResponse> {
+  return fetchJson<HalvingResponse>("/info/halving");
+}
+
+export async function getKaspadInfo(): Promise<KaspadInfoResponse> {
+  return fetchJson<KaspadInfoResponse>("/info/kaspad");
+}
+
+export async function getVirtualChainBlueScore(): Promise<BlueScoreResponse> {
+  return fetchJson<BlueScoreResponse>("/info/virtual-chain-blue-score");
+}

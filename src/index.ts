@@ -27,6 +27,17 @@ import {
   calculateTransactionMass,
   getTransactionCount,
   getTransactionCountHistory,
+  getBlock,
+  getBlocks,
+  getBlocksFromBluescore,
+  getBlockdagInfo,
+  getHashrate,
+  getCoinSupply,
+  getPrice,
+  getBlockReward,
+  getHalvingInfo,
+  getKaspadInfo,
+  getVirtualChainBlueScore,
   KaspaClientError,
   type UtxoResponse,
   type SearchTransactionResult,
@@ -38,7 +49,7 @@ import { sompiToKas } from "./conversion.js";
 
 const server = new McpServer({
   name: "kaspa-simple-mcp",
-  version: "0.6.0",
+  version: "0.7.0",
 });
 
 server.tool(
@@ -628,6 +639,203 @@ server.tool(
       }));
       return {
         content: [{ type: "text", text: JSON.stringify({ dayOrMonth, count: formatted.length, entries: formatted }, null, 2) }],
+      };
+    } catch (err) {
+      return formatError(err);
+    }
+  },
+);
+
+// --- Block endpoints ---
+
+server.tool(
+  "get_block",
+  {
+    blockId: z.string().describe("Kaspa block hash (64-char hex)"),
+    includeTransactions: z.boolean().optional().default(true).describe("Include transactions in the response"),
+    includeColor: z.boolean().optional().default(false).describe("Include color/miner info"),
+  },
+  async ({ blockId, includeTransactions, includeColor }) => {
+    try {
+      const data = await getBlock(blockId, includeTransactions, includeColor);
+      return {
+        content: [{ type: "text", text: JSON.stringify(data, null, 2) }],
+      };
+    } catch (err) {
+      return formatError(err);
+    }
+  },
+);
+
+server.tool(
+  "get_blocks",
+  {
+    lowHash: z.string().describe("Starting block hash (64-char hex)"),
+    includeBlocks: z.boolean().optional().default(false).describe("Include full block data"),
+    includeTransactions: z.boolean().optional().default(false).describe("Include transactions in block data"),
+  },
+  async ({ lowHash, includeBlocks, includeTransactions }) => {
+    try {
+      const data = await getBlocks(lowHash, includeBlocks, includeTransactions);
+      const result: Record<string, unknown> = {
+        lowHash,
+        blockCount: data.blockHashes.length,
+        blockHashes: data.blockHashes,
+      };
+      if (data.blocks) {
+        result.blocks = data.blocks;
+      }
+      return {
+        content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+      };
+    } catch (err) {
+      return formatError(err);
+    }
+  },
+);
+
+server.tool(
+  "get_blocks_from_bluescore",
+  {
+    blueScore: z.number().int().min(0).optional().describe("Exact blue score"),
+    blueScoreGte: z.number().int().min(0).optional().describe("Blue score greater than or equal"),
+    blueScoreLt: z.number().int().min(0).optional().describe("Blue score less than"),
+    includeTransactions: z.boolean().optional().default(false).describe("Include transactions"),
+  },
+  async ({ blueScore, blueScoreGte, blueScoreLt, includeTransactions }) => {
+    try {
+      const provided = [blueScore, blueScoreGte, blueScoreLt].filter((x) => x !== undefined).length;
+      if (provided !== 1) {
+        return {
+          content: [{ type: "text", text: JSON.stringify({ error: "Exactly one of blueScore, blueScoreGte, or blueScoreLt must be provided" }) }],
+          isError: true,
+        };
+      }
+      const data = await getBlocksFromBluescore({ blueScore, blueScoreGte, blueScoreLt }, includeTransactions);
+      return {
+        content: [{ type: "text", text: JSON.stringify({ count: data.length, blocks: data }, null, 2) }],
+      };
+    } catch (err) {
+      return formatError(err);
+    }
+  },
+);
+
+// --- Info endpoints ---
+
+server.tool(
+  "get_blockdag_info",
+  {},
+  async () => {
+    try {
+      const data = await getBlockdagInfo();
+      return {
+        content: [{ type: "text", text: JSON.stringify(data, null, 2) }],
+      };
+    } catch (err) {
+      return formatError(err);
+    }
+  },
+);
+
+server.tool(
+  "get_hashrate",
+  {},
+  async () => {
+    try {
+      const data = await getHashrate();
+      return {
+        content: [{ type: "text", text: JSON.stringify(data, null, 2) }],
+      };
+    } catch (err) {
+      return formatError(err);
+    }
+  },
+);
+
+server.tool(
+  "get_coin_supply",
+  {},
+  async () => {
+    try {
+      const data = await getCoinSupply();
+      return {
+        content: [{ type: "text", text: JSON.stringify(data, null, 2) }],
+      };
+    } catch (err) {
+      return formatError(err);
+    }
+  },
+);
+
+server.tool(
+  "get_price",
+  {},
+  async () => {
+    try {
+      const data = await getPrice();
+      return {
+        content: [{ type: "text", text: JSON.stringify(data, null, 2) }],
+      };
+    } catch (err) {
+      return formatError(err);
+    }
+  },
+);
+
+server.tool(
+  "get_block_reward",
+  {},
+  async () => {
+    try {
+      const data = await getBlockReward();
+      return {
+        content: [{ type: "text", text: JSON.stringify(data, null, 2) }],
+      };
+    } catch (err) {
+      return formatError(err);
+    }
+  },
+);
+
+server.tool(
+  "get_halving_info",
+  {},
+  async () => {
+    try {
+      const data = await getHalvingInfo();
+      return {
+        content: [{ type: "text", text: JSON.stringify(data, null, 2) }],
+      };
+    } catch (err) {
+      return formatError(err);
+    }
+  },
+);
+
+server.tool(
+  "get_kaspad_info",
+  {},
+  async () => {
+    try {
+      const data = await getKaspadInfo();
+      return {
+        content: [{ type: "text", text: JSON.stringify(data, null, 2) }],
+      };
+    } catch (err) {
+      return formatError(err);
+    }
+  },
+);
+
+server.tool(
+  "get_virtual_chain_blue_score",
+  {},
+  async () => {
+    try {
+      const data = await getVirtualChainBlueScore();
+      return {
+        content: [{ type: "text", text: JSON.stringify(data, null, 2) }],
       };
     } catch (err) {
       return formatError(err);
