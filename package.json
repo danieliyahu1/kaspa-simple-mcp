@@ -1,0 +1,40 @@
+{
+  "name": "kaspa-simple-mcp",
+  "version": "0.1.0",
+  "description": "A read-only MCP server for Kaspa mainnet — balance lookup, transaction lookup, and fee estimates.",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "kaspa-simple-mcp": "dist/index.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "test": "node test_integration.mjs",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": ["kaspa", "mcp", "model-context-protocol", "crypto", "blockchain"],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/danieliyahu1/kaspa-simple-mcp"
+  },
+  "bugs": {
+    "url": "https://github.com/danieliyahu1/kaspa-simple-mcp/issues"
+  },
+  "homepage": "https://github.com/danieliyahu1/kaspa-simple-mcp#readme",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "zod": "^3.24.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.7.0"
+  }
+}
