@@ -352,3 +352,131 @@ export interface AddressNameEntry {
 export async function getAddressNames(): Promise<AddressNameEntry[]> {
   return fetchJson<AddressNameEntry[]>("/addresses/names");
 }
+
+// --- Transaction Search ---
+
+export interface SearchTransactionResult {
+  subnetwork_id: string;
+  transaction_id: string;
+  hash: string;
+  mass: string;
+  payload: string;
+  block_hash: string[];
+  block_time: number;
+  version: number;
+  is_accepted: boolean;
+  accepting_block_hash: string;
+  accepting_block_blue_score: number;
+  accepting_block_time: number;
+  inputs: SearchTxInput[];
+  outputs: TxOutput[];
+}
+
+export interface SearchTxInput {
+  transaction_id: string;
+  index: number;
+  previous_outpoint_hash: string;
+  previous_outpoint_index: string;
+  previous_outpoint_resolved?: TxOutput;
+  previous_outpoint_address?: string;
+  previous_outpoint_amount?: number;
+  signature_script?: string;
+  sig_op_count?: string;
+  compute_budget?: number;
+  covenant_id?: string;
+}
+
+export async function searchTransactions(
+  body: { transactionIds?: string[]; acceptingBlueScores?: { gte: number; lt: number } },
+  query?: { fields?: string; resolvePreviousOutpoints?: string; acceptance?: string },
+): Promise<SearchTransactionResult[]> {
+  let path = "/transactions/search";
+  if (query) {
+    const params = new URLSearchParams();
+    if (query.fields) params.set("fields", query.fields);
+    if (query.resolvePreviousOutpoints) params.set("resolve_previous_outpoints", query.resolvePreviousOutpoints);
+    if (query.acceptance) params.set("acceptance", query.acceptance);
+    const qs = params.toString();
+    if (qs) path += `?${qs}`;
+  }
+  return postJson<SearchTransactionResult[]>(path, body);
+}
+
+// --- Transaction Acceptance ---
+
+export interface TxAcceptanceResult {
+  transactionId: string;
+  accepted: boolean;
+  acceptingBlockHash?: string;
+  acceptingBlueScore?: number;
+  acceptingTimestamp?: number;
+}
+
+export async function getTransactionsAcceptance(
+  transactionIds: string[],
+): Promise<TxAcceptanceResult[]> {
+  return postJson<TxAcceptanceResult[]>("/transactions/acceptance", { transactionIds });
+}
+
+// --- Transaction Mass Calculation ---
+
+export interface SubmitTxOutpoint {
+  transactionId: string;
+  index: number;
+}
+
+export interface SubmitTxInput {
+  previousOutpoint: SubmitTxOutpoint;
+  signatureScript: string;
+  sequence: number;
+  sigOpCount: number;
+}
+
+export interface SubmitTxScriptPublicKey {
+  version: number;
+  scriptPublicKey: string;
+}
+
+export interface SubmitTxOutput {
+  amount: number;
+  scriptPublicKey: SubmitTxScriptPublicKey;
+}
+
+export interface TxMassRequest {
+  version: number;
+  inputs: SubmitTxInput[];
+  outputs: SubmitTxOutput[];
+  lockTime?: number;
+  subnetworkId?: string;
+}
+
+export interface TxMassResult {
+  mass: number;
+  storage_mass: number;
+  compute_mass: number;
+}
+
+export async function calculateTransactionMass(
+  body: TxMassRequest,
+): Promise<TxMassResult> {
+  return postJson<TxMassResult>("/transactions/mass", body);
+}
+
+// --- Transaction Count ---
+
+export interface TransactionCountResult {
+  timestamp: number;
+  dateTime: string;
+  coinbase: number;
+  regular: number;
+}
+
+export async function getTransactionCount(): Promise<TransactionCountResult> {
+  return fetchJson<TransactionCountResult>("/transactions/count/");
+}
+
+export async function getTransactionCountHistory(
+  dayOrMonth: string,
+): Promise<TransactionCountResult[]> {
+  return fetchJson<TransactionCountResult[]>(`/transactions/count/${dayOrMonth}`);
+}

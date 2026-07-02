@@ -22,14 +22,23 @@ import {
   getActiveAddressesCount,
   getActiveAddressesCountHistory,
   getAddressNames,
+  searchTransactions,
+  getTransactionsAcceptance,
+  calculateTransactionMass,
+  getTransactionCount,
+  getTransactionCountHistory,
   KaspaClientError,
   type UtxoResponse,
+  type SearchTransactionResult,
+  type TxAcceptanceResult,
+  type TxMassResult,
+  type TransactionCountResult,
 } from "./kaspa-client.js";
 import { sompiToKas } from "./conversion.js";
 
 const server = new McpServer({
   name: "kaspa-simple-mcp",
-  version: "0.1.0",
+  version: "0.6.0",
 });
 
 server.tool(
@@ -433,6 +442,192 @@ server.tool(
       const data = await getAddressNames();
       return {
         content: [{ type: "text", text: JSON.stringify(data, null, 2) }],
+      };
+    } catch (err) {
+      return formatError(err);
+    }
+  },
+);
+
+// --- Transaction Search ---
+
+server.tool(
+  "search_transactions",
+  {
+    transactionIds: z.array(z.string()).optional().describe("Array of transaction IDs to search for"),
+    acceptingBlueScoreGte: z.number().int().min(0).optional().describe("Minimum accepting blue score"),
+    acceptingBlueScoreLt: z.number().int().min(0).optional().describe("Maximum accepting blue score (exclusive)"),
+    resolvePreviousOutpoints: z.enum(["no", "light", "full"]).optional().describe("Resolve previous outpoint details"),
+    acceptance: z.enum(["accepted", "rejected"]).optional().describe("Filter by acceptance status"),
+  },
+  async ({ transactionIds, acceptingBlueScoreGte, acceptingBlueScoreLt, resolvePreviousOutpoints, acceptance }) => {
+    try {
+      const body: { transactionIds?: string[]; acceptingBlueScores?: { gte: number; lt: number } } = {};
+      if (transactionIds && transactionIds.length > 0) body.transactionIds = transactionIds;
+      if (acceptingBlueScoreGte !== undefined || acceptingBlueScoreLt !== undefined) {
+        body.acceptingBlueScores = {
+          gte: acceptingBlueScoreGte ?? 0,
+          lt: acceptingBlueScoreLt ?? 0,
+        };
+      }
+      const results = await searchTransactions(
+        body,
+        { resolvePreviousOutpoints, acceptance },
+      );
+      const formatted = results.map((tx) => ({
+        txId: tx.transaction_id,
+        hash: tx.hash,
+        isAccepted: tx.is_accepted,
+        blockTime: tx.block_time ? new Date(tx.block_time).toISOString() : null,
+        blockHash: tx.block_hash,
+        mass: tx.mass,
+        version: tx.version,
+        acceptingBlockBlueScore: tx.accepting_block_blue_score,
+        inputs: tx.inputs ? tx.inputs.map((i) => ({
+          txId: i.transaction_id,
+          index: i.index,
+          previousOutpointHash: i.previous_outpoint_hash,
+          previousOutpointIndex: i.previous_outpoint_index,
+          previousOutpointAddress: i.previous_outpoint_address ?? null,
+          previousOutpointAmount: i.previous_outpoint_amount != null ? sompiToKas(i.previous_outpoint_amount) : null,
+          signatureScript: i.signature_script ?? null,
+        })) : [],
+        outputs: tx.outputs ? tx.outputs.map((o) => ({
+          recipient: o.script_public_key_address,
+          amount: sompiToKas(o.amount),
+          scriptType: o.script_public_key_type,
+        })) : [],
+      }));
+      return {
+        content: [{ type: "text", text: JSON.stringify({ count: formatted.length, transactions: formatted }, null, 2) }],
+      };
+    } catch (err) {
+      return formatError(err);
+    }
+  },
+);
+
+// --- Transaction Acceptance ---
+
+server.tool(
+  "get_transactions_acceptance",
+  {
+    transactionIds: z.array(z.string()).min(1).max(200).describe("Array of transaction IDs to check acceptance for"),
+  },
+  async ({ transactionIds }) => {
+    try {
+      const results = await getTransactionsAcceptance(transactionIds);
+      const formatted = results.map((r) => ({
+        txId: r.transactionId,
+        accepted: r.accepted,
+        acceptingBlockHash: r.acceptingBlockHash ?? null,
+        acceptingBlueScore: r.acceptingBlueScore ?? null,
+        acceptingTimestamp: r.acceptingTimestamp ? new Date(r.acceptingTimestamp).toISOString() : null,
+      }));
+      return {
+        content: [{ type: "text", text: JSON.stringify({ results: formatted }, null, 2) }],
+      };
+    } catch (err) {
+      return formatError(err);
+    }
+  },
+);
+
+// --- Calculate Transaction Mass ---
+
+server.tool(
+  "calculate_transaction_mass",
+  {
+    version: z.number().int().describe("Transaction version"),
+    inputs: z.array(z.object({
+      previousOutpoint: z.object({
+        transactionId: z.string(),
+        index: z.number().int(),
+      }),
+      signatureScript: z.string(),
+      sequence: z.number().int(),
+      sigOpCount: z.number().int(),
+    })).describe("Transaction inputs"),
+    outputs: z.array(z.object({
+      amount: z.number().int(),
+      scriptPublicKey: z.object({
+        version: z.number().int(),
+        scriptPublicKey: z.string(),
+      }),
+    })).describe("Transaction outputs"),
+    lockTime: z.number().int().optional().describe("Lock time (default 0)"),
+    subnetworkId: z.string().optional().describe("Subnetwork ID"),
+  },
+  async ({ version, inputs, outputs, lockTime, subnetworkId }) => {
+    try {
+      const result = await calculateTransactionMass({
+        version,
+        inputs,
+        outputs,
+        lockTime,
+        subnetworkId,
+      });
+      return {
+        content: [{
+          type: "text",
+          text: JSON.stringify({
+            mass: result.mass,
+            storageMass: result.storage_mass,
+            computeMass: result.compute_mass,
+          }, null, 2),
+        }],
+      };
+    } catch (err) {
+      return formatError(err);
+    }
+  },
+);
+
+// --- Transaction Count ---
+
+server.tool(
+  "get_transaction_count",
+  {},
+  async () => {
+    try {
+      const data = await getTransactionCount();
+      return {
+        content: [{
+          type: "text",
+          text: JSON.stringify({
+            timestamp: new Date(data.timestamp).toISOString(),
+            dateTime: data.dateTime,
+            coinbase: data.coinbase,
+            regular: data.regular,
+            total: data.coinbase + data.regular,
+          }, null, 2),
+        }],
+      };
+    } catch (err) {
+      return formatError(err);
+    }
+  },
+);
+
+// --- Transaction Count History ---
+
+server.tool(
+  "get_transaction_count_history",
+  {
+    dayOrMonth: z.string().regex(/^\d{4}-\d{2}(-\d{2})?$/).describe("UTC day (YYYY-MM-DD) or month (YYYY-MM)"),
+  },
+  async ({ dayOrMonth }) => {
+    try {
+      const entries = await getTransactionCountHistory(dayOrMonth);
+      const formatted = entries.map((e) => ({
+        timestamp: new Date(e.timestamp).toISOString(),
+        dateTime: e.dateTime,
+        coinbase: e.coinbase,
+        regular: e.regular,
+        total: e.coinbase + e.regular,
+      }));
+      return {
+        content: [{ type: "text", text: JSON.stringify({ dayOrMonth, count: formatted.length, entries: formatted }, null, 2) }],
       };
     } catch (err) {
       return formatError(err);
