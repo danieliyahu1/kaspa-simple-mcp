@@ -7,7 +7,9 @@ import {
   getBalance,
   getTransaction,
   getFeeEstimate,
+  getAddressUtxos,
   KaspaClientError,
+  type UtxoResponse,
 } from "./kaspa-client.js";
 import { sompiToKas } from "./conversion.js";
 
@@ -26,6 +28,45 @@ server.tool(
       const data = await getBalance(address);
       return {
         content: [{ type: "text", text: JSON.stringify({ balance: sompiToKas(data.balance) }) }],
+      };
+    } catch (err) {
+      return formatError(err);
+    }
+  },
+);
+
+server.tool(
+  "get_address_utxos",
+  {
+    address: z.string().describe("Kaspa mainnet address"),
+  },
+  async ({ address }) => {
+    try {
+      const utxos = await getAddressUtxos(address);
+      const totalSompi = utxos.reduce((sum, u) => sum + BigInt(u.utxoEntry.amount), 0n);
+      const utxoList = utxos.map((u) => ({
+        txId: u.outpoint.transactionId,
+        index: u.outpoint.index,
+        amount: sompiToKas(Number(u.utxoEntry.amount)),
+        daaScore: Number(u.utxoEntry.blockDaaScore),
+        isCoinbase: u.utxoEntry.isCoinbase,
+      }));
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(
+              {
+                address,
+                totalUtxos: utxos.length,
+                totalKas: sompiToKas(Number(totalSompi)),
+                utxos: utxoList,
+              },
+              null,
+              2,
+            ),
+          },
+        ],
       };
     } catch (err) {
       return formatError(err);

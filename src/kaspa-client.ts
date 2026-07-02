@@ -17,6 +17,23 @@ export interface TransactionResponse {
   outputs: TransactionOutput[];
 }
 
+export interface OutpointModel {
+  transactionId: string;
+  index: number;
+}
+
+export interface UtxoModel {
+  amount: string;
+  blockDaaScore: string;
+  isCoinbase: boolean;
+}
+
+export interface UtxoResponse {
+  address?: string;
+  outpoint: OutpointModel;
+  utxoEntry: UtxoModel;
+}
+
 export interface FeeEstimateResponse {
   priorityBucket: {
     feerate: number;
@@ -75,4 +92,8 @@ export async function getTransaction(txId: string): Promise<TransactionResponse>
 
 export async function getFeeEstimate(): Promise<FeeEstimateResponse> {
   return fetchJson<FeeEstimateResponse>("/info/fee-estimate");
+}
+
+export async function getAddressUtxos(address: string): Promise<UtxoResponse[]> {
+  return fetchJson<UtxoResponse[]>(`/addresses/${address}/utxos`);
 }
