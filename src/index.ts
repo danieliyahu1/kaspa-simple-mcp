@@ -8,6 +8,10 @@ import {
   getTransaction,
   getFeeEstimate,
   getAddressUtxos,
+  getAddressTransactions,
+  getAddressTransactionCount,
+  getAddressUtxoCount,
+  getBalancesBatch,
   KaspaClientError,
   type UtxoResponse,
 } from "./kaspa-client.js";
@@ -115,6 +119,89 @@ server.tool(
         content: [
           { type: "text", text: JSON.stringify({ feerate: sompiToKas(data.priorityBucket.feerate) }) },
         ],
+      };
+    } catch (err) {
+      return formatError(err);
+    }
+  },
+);
+
+server.tool(
+  "get_address_transactions",
+  {
+    address: z.string().describe("Kaspa mainnet address"),
+    limit: z.number().min(1).max(500).default(50).describe("Number of transactions (max 500)"),
+    offset: z.number().min(0).default(0).describe("Offset for pagination"),
+  },
+  async ({ address, limit = 50, offset = 0 }) => {
+    try {
+      const txs = await getAddressTransactions(address, limit, offset);
+      const result = txs.map((tx) => ({
+        txId: tx.transaction_id,
+        status: tx.is_accepted ? "confirmed" : "pending",
+        timestamp: tx.block_time ?? null,
+        outputs: tx.outputs.slice(0, 3).map((o) => ({
+          recipient: o.script_public_key_address,
+          amount: sompiToKas(o.amount),
+        })),
+      }));
+      return {
+        content: [{ type: "text", text: JSON.stringify({ address, count: txs.length, transactions: result }, null, 2) }],
+      };
+    } catch (err) {
+      return formatError(err);
+    }
+  },
+);
+
+server.tool(
+  "get_address_transaction_count",
+  {
+    address: z.string().describe("Kaspa mainnet address"),
+  },
+  async ({ address }) => {
+    try {
+      const data = await getAddressTransactionCount(address);
+      return {
+        content: [{ type: "text", text: JSON.stringify({ address, totalTransactions: data.total }) }],
+      };
+    } catch (err) {
+      return formatError(err);
+    }
+  },
+);
+
+server.tool(
+  "get_address_utxo_count",
+  {
+    address: z.string().describe("Kaspa mainnet address"),
+  },
+  async ({ address }) => {
+    try {
+      const data = await getAddressUtxoCount(address);
+      return {
+        content: [{ type: "text", text: JSON.stringify({ address, totalUtxos: data.count }) }],
+      };
+    } catch (err) {
+      return formatError(err);
+    }
+  },
+);
+
+server.tool(
+  "get_balances_batch",
+  {
+    addresses: z.array(z.string()).min(1).max(100).describe("Array of Kaspa mainnet addresses"),
+  },
+  async ({ addresses }) => {
+    try {
+      const entries = await getBalancesBatch(addresses);
+      const result = entries.map((e) => ({
+        address: e.address,
+        balance: sompiToKas(e.balance),
+      }));
+      return {
+        content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
       };
     } catch (err) {
       return formatError(err);

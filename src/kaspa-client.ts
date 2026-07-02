@@ -40,6 +40,39 @@ export interface FeeEstimateResponse {
   };
 }
 
+export interface TransactionCount {
+  total: number;
+}
+
+export interface UtxoCountResponse {
+  count: number;
+}
+
+export interface BalancesByAddressEntry {
+  address: string;
+  balance: number;
+}
+
+export interface TxOutput {
+  transaction_id: string;
+  index: number;
+  amount: number;
+  script_public_key_address: string;
+  script_public_key_type: string;
+}
+
+export interface TxModelResponse {
+  transaction_id: string;
+  hash: string;
+  is_accepted: boolean;
+  block_time?: number;
+  outputs: TxOutput[];
+  mass?: string;
+  version?: number;
+  accepting_block_blue_score?: number;
+  accepting_block_time?: number;
+}
+
 export class KaspaClientError extends Error {
   constructor(
     message: string,
@@ -47,6 +80,39 @@ export class KaspaClientError extends Error {
   ) {
     super(message);
     this.name = "KaspaClientError";
+  }
+}
+
+async function postJson<T>(path: string, body: unknown): Promise<T> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+
+  try {
+    const response = await fetch(`${BASE_URL}${path}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+      signal: controller.signal,
+    });
+
+    if (!response.ok) {
+      throw new KaspaClientError(
+        `Kaspa API error: ${response.status} ${response.statusText}`,
+        response.status,
+      );
+    }
+
+    return (await response.json()) as T;
+  } catch (err) {
+    if (err instanceof KaspaClientError) throw err;
+    if (err instanceof DOMException && err.name === "AbortError") {
+      throw new KaspaClientError("Kaspa API request timed out");
+    }
+    throw new KaspaClientError(
+      err instanceof Error ? err.message : "Unknown network error",
+    );
+  } finally {
+    clearTimeout(timer);
   }
 }
 
@@ -96,4 +162,32 @@ export async function getFeeEstimate(): Promise<FeeEstimateResponse> {
 
 export async function getAddressUtxos(address: string): Promise<UtxoResponse[]> {
   return fetchJson<UtxoResponse[]>(`/addresses/${address}/utxos`);
+}
+
+export async function getAddressTransactions(
+  address: string,
+  limit = 50,
+  offset = 0,
+): Promise<TxModelResponse[]> {
+  return fetchJson<TxModelResponse[]>(
+    `/addresses/${address}/full-transactions?limit=${limit}&offset=${offset}`,
+  );
+}
+
+export async function getAddressTransactionCount(
+  address: string,
+): Promise<TransactionCount> {
+  return fetchJson<TransactionCount>(`/addresses/${address}/transactions-count`);
+}
+
+export async function getAddressUtxoCount(
+  address: string,
+): Promise<UtxoCountResponse> {
+  return fetchJson<UtxoCountResponse>(`/addresses/${address}/utxos/count`);
+}
+
+export async function getBalancesBatch(
+  addresses: string[],
+): Promise<BalancesByAddressEntry[]> {
+  return postJson<BalancesByAddressEntry[]>("/addresses/balances", { addresses });
 }

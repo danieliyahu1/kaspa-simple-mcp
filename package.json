@@ -1,7 +1,7 @@
 {
   "name": "kaspa-simple-mcp",
-  "version": "0.2.0",
-  "description": "A read-only MCP server for Kaspa mainnet — balance lookup, transaction lookup, and fee estimates.",
+  "version": "0.3.0",
+  "description": "A read-only MCP server for Kaspa mainnet — balance, UTXOs, transactions, and network info.",
   "type": "module",
   "main": "dist/index.js",
   "bin": {

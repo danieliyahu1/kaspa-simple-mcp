@@ -86,7 +86,56 @@ function runTests() {
         if (feeData.feerate === undefined) throw new Error(`get_fee_estimate error: ${feeData.error}`);
         console.log(`PASS get_fee_estimate → ${feeData.feerate} KAS/KB`);
 
-        // Phase 4: get_balance
+        // Phase 4: get_address_transaction_count
+        const txnCountId = send("tools/call", {
+          name: "get_address_transaction_count",
+          arguments: { address: "kaspa:qpauqsvk7yf9unexwmxsnmg547mhyga37csh0kj53q6xxgl24ydxjsgzthw5j" },
+        });
+        const txnCountResp = await waitFor(txnCountId);
+        if (!txnCountResp?.result?.content?.[0]?.text) throw new Error(`get_address_transaction_count failed: ${JSON.stringify(txnCountResp)}`);
+        const txnCountData = JSON.parse(txnCountResp.result.content[0].text);
+        if (txnCountData.totalTransactions === undefined) throw new Error(`get_address_transaction_count error: ${txnCountData.error}`);
+        console.log(`PASS get_address_transaction_count → ${txnCountData.totalTransactions} txns`);
+
+        // Phase 5: get_address_utxo_count
+        const utxoCountId = send("tools/call", {
+          name: "get_address_utxo_count",
+          arguments: { address: "kaspa:qpauqsvk7yf9unexwmxsnmg547mhyga37csh0kj53q6xxgl24ydxjsgzthw5j" },
+        });
+        const utxoCountResp = await waitFor(utxoCountId);
+        if (!utxoCountResp?.result?.content?.[0]?.text) throw new Error(`get_address_utxo_count failed: ${JSON.stringify(utxoCountResp)}`);
+        const utxoCountData = JSON.parse(utxoCountResp.result.content[0].text);
+        if (utxoCountData.totalUtxos === undefined) throw new Error(`get_address_utxo_count error: ${utxoCountData.error}`);
+        console.log(`PASS get_address_utxo_count → ${utxoCountData.totalUtxos} utxos`);
+
+        // Phase 6: get_address_transactions
+        const txsId = send("tools/call", {
+          name: "get_address_transactions",
+          arguments: { address: "kaspa:qpauqsvk7yf9unexwmxsnmg547mhyga37csh0kj53q6xxgl24ydxjsgzthw5j", limit: 3 },
+        });
+        const txsResp = await waitFor(txsId);
+        if (!txsResp?.result?.content?.[0]?.text) throw new Error(`get_address_transactions failed: ${JSON.stringify(txsResp)}`);
+        const txsData = JSON.parse(txsResp.result.content[0].text);
+        if (!txsData.transactions || !Array.isArray(txsData.transactions)) throw new Error(`get_address_transactions error: ${txsData.error}`);
+        console.log(`PASS get_address_transactions → ${txsData.count} txns returned`);
+
+        // Phase 7: get_balances_batch
+        const batchId = send("tools/call", {
+          name: "get_balances_batch",
+          arguments: {
+            addresses: [
+              "kaspa:qpauqsvk7yf9unexwmxsnmg547mhyga37csh0kj53q6xxgl24ydxjsgzthw5j",
+              "kaspa:qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqkx9awp4e",
+            ],
+          },
+        });
+        const batchResp = await waitFor(batchId);
+        if (!batchResp?.result?.content?.[0]?.text) throw new Error(`get_balances_batch failed: ${JSON.stringify(batchResp)}`);
+        const batchData = JSON.parse(batchResp.result.content[0].text);
+        if (!Array.isArray(batchData) || batchData.length !== 2) throw new Error(`get_balances_batch error: unexpected result`);
+        console.log(`PASS get_balances_batch → ${batchData.length} balances returned`);
+
+        // Phase 8: get_balance
         const balId = send("tools/call", {
           name: "get_balance",
           arguments: { address: "kaspa:qpauqsvk7yf9unexwmxsnmg547mhyga37csh0kj53q6xxgl24ydxjsgzthw5j" },
@@ -99,7 +148,7 @@ function runTests() {
 
         // Done
         notify("notifications/exit");
-        console.log(`\nAll 4 tests passed. Server works correctly against Kaspa mainnet.`);
+        console.log(`\nAll 8 tests passed. Server works correctly against Kaspa mainnet.`);
         proc.stdin.end();
         resolve();
       } catch (err) {
