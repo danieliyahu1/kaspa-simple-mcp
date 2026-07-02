@@ -12,6 +12,10 @@ import {
   getAddressTransactionCount,
   getAddressUtxoCount,
   getBalancesBatch,
+  getAddressBalanceHistory,
+  getUtxosBatch,
+  getAddressTransactionsPage,
+  getAddressesActive,
   KaspaClientError,
   type UtxoResponse,
 } from "./kaspa-client.js";
@@ -202,6 +206,128 @@ server.tool(
       }));
       return {
         content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+      };
+    } catch (err) {
+      return formatError(err);
+    }
+  },
+);
+
+server.tool(
+  "get_address_balance_history",
+  {
+    address: z.string().describe("Kaspa mainnet address"),
+    dayOrMonth: z.string().regex(/^\d{4}-\d{2}(-\d{2})?$/).describe("UTC day (YYYY-MM-DD) or month (YYYY-MM)"),
+  },
+  async ({ address, dayOrMonth }) => {
+    try {
+      const entries = await getAddressBalanceHistory(address, dayOrMonth);
+      const history = entries.map((e) => ({
+        timestamp: new Date(e.timestamp).toISOString(),
+        amount: sompiToKas(e.amount),
+      }));
+      return {
+        content: [{ type: "text", text: JSON.stringify({ address, dayOrMonth, history }, null, 2) }],
+      };
+    } catch (err) {
+      return formatError(err);
+    }
+  },
+);
+
+server.tool(
+  "get_utxos_batch",
+  {
+    addresses: z.array(z.string()).min(1).max(100).describe("Array of Kaspa mainnet addresses"),
+  },
+  async ({ addresses }) => {
+    try {
+      const utxos = await getUtxosBatch(addresses);
+      const grouped: Record<string, { totalUtxos: number; totalKas: string; utxos: unknown[] }> = {};
+      for (const u of utxos) {
+        const addr = u.address ?? "unknown";
+        if (!grouped[addr]) {
+          grouped[addr] = { totalUtxos: 0, totalKas: "0", utxos: [] };
+        }
+        grouped[addr].totalUtxos++;
+        grouped[addr].utxos.push({
+          txId: u.outpoint.transactionId,
+          index: u.outpoint.index,
+          amount: sompiToKas(Number(u.utxoEntry.amount)),
+          daaScore: Number(u.utxoEntry.blockDaaScore),
+          isCoinbase: u.utxoEntry.isCoinbase,
+        });
+      }
+      for (const addr of Object.keys(grouped)) {
+        const totalSompi = utxos
+          .filter((u) => (u.address ?? "unknown") === addr)
+          .reduce((sum, u) => sum + BigInt(u.utxoEntry.amount), 0n);
+        grouped[addr].totalKas = sompiToKas(Number(totalSompi));
+      }
+      return {
+        content: [{ type: "text", text: JSON.stringify(grouped, null, 2) }],
+      };
+    } catch (err) {
+      return formatError(err);
+    }
+  },
+);
+
+server.tool(
+  "get_address_transactions_page",
+  {
+    address: z.string().describe("Kaspa mainnet address"),
+    limit: z.number().min(1).max(500).default(50).describe("Max records per page (max 500)"),
+    before: z.number().min(0).optional().describe("Only include transactions with block time before this epoch-millis"),
+    after: z.number().min(0).optional().describe("Only include transactions with block time after this epoch-millis"),
+  },
+  async ({ address, limit = 50, before, after }) => {
+    try {
+      const { transactions, nextBefore, nextAfter } = await getAddressTransactionsPage(
+        address, limit, before ?? 0, after ?? 0,
+      );
+      const result = transactions.map((tx) => ({
+        txId: tx.transaction_id,
+        status: tx.is_accepted ? "confirmed" : "pending",
+        timestamp: tx.block_time ?? null,
+        outputs: tx.outputs.slice(0, 3).map((o) => ({
+          recipient: o.script_public_key_address,
+          amount: sompiToKas(o.amount),
+        })),
+      }));
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(
+              { address, limit, count: result.length, transactions: result, nextBefore: nextBefore ?? null, nextAfter: nextAfter ?? null },
+              null,
+              2,
+            ),
+          },
+        ],
+      };
+    } catch (err) {
+      return formatError(err);
+    }
+  },
+);
+
+server.tool(
+  "get_addresses_active",
+  {
+    addresses: z.array(z.string()).min(1).max(100).describe("Array of Kaspa mainnet addresses"),
+  },
+  async ({ addresses }) => {
+    try {
+      const entries = await getAddressesActive(addresses);
+      const results = entries.map((e) => ({
+        address: e.address,
+        active: e.active,
+        lastTxBlockTime: e.lastTxBlockTime ? new Date(e.lastTxBlockTime).toISOString() : null,
+      }));
+      return {
+        content: [{ type: "text", text: JSON.stringify({ results }, null, 2) }],
       };
     } catch (err) {
       return formatError(err);

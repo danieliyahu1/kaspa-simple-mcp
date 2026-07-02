@@ -146,9 +146,62 @@ function runTests() {
         if (balData.balance === undefined) throw new Error(`get_balance error: ${balData.error}`);
         console.log(`PASS get_balance → ${balData.balance} KAS`);
 
+        // Phase 9: get_address_balance_history
+        const balHistId = send("tools/call", {
+          name: "get_address_balance_history",
+          arguments: { address: "kaspa:qpauqsvk7yf9unexwmxsnmg547mhyga37csh0kj53q6xxgl24ydxjsgzthw5j", dayOrMonth: "2025-01" },
+        });
+        const balHistResp = await waitFor(balHistId);
+        if (!balHistResp?.result?.content?.[0]?.text) throw new Error(`get_address_balance_history failed: ${JSON.stringify(balHistResp)}`);
+        const balHistData = JSON.parse(balHistResp.result.content[0].text);
+        if (!balHistData.history || !Array.isArray(balHistData.history)) throw new Error(`get_address_balance_history error: missing history array`);
+        console.log(`PASS get_address_balance_history → ${balHistData.history.length} entries`);
+
+        // Phase 10: get_utxos_batch
+        const utxoBatchId = send("tools/call", {
+          name: "get_utxos_batch",
+          arguments: {
+            addresses: [
+              "kaspa:qpauqsvk7yf9unexwmxsnmg547mhyga37csh0kj53q6xxgl24ydxjsgzthw5j",
+            ],
+          },
+        });
+        const utxoBatchResp = await waitFor(utxoBatchId);
+        if (!utxoBatchResp?.result?.content?.[0]?.text) throw new Error(`get_utxos_batch failed: ${JSON.stringify(utxoBatchResp)}`);
+        const utxoBatchData = JSON.parse(utxoBatchResp.result.content[0].text);
+        const addrKey = "kaspa:qpauqsvk7yf9unexwmxsnmg547mhyga37csh0kj53q6xxgl24ydxjsgzthw5j";
+        if (!utxoBatchData[addrKey]) throw new Error(`get_utxos_batch error: address not found in response`);
+        console.log(`PASS get_utxos_batch → ${utxoBatchData[addrKey].totalUtxos} utxos`);
+
+        // Phase 11: get_address_transactions_page
+        const txsPageId = send("tools/call", {
+          name: "get_address_transactions_page",
+          arguments: { address: "kaspa:qpauqsvk7yf9unexwmxsnmg547mhyga37csh0kj53q6xxgl24ydxjsgzthw5j", limit: 3 },
+        });
+        const txsPageResp = await waitFor(txsPageId);
+        if (!txsPageResp?.result?.content?.[0]?.text) throw new Error(`get_address_transactions_page failed: ${JSON.stringify(txsPageResp)}`);
+        const txsPageData = JSON.parse(txsPageResp.result.content[0].text);
+        if (!txsPageData.transactions || !Array.isArray(txsPageData.transactions)) throw new Error(`get_address_transactions_page error: missing transactions`);
+        console.log(`PASS get_address_transactions_page → ${txsPageData.count} txns, nextBefore: ${txsPageData.nextBefore}`);
+
+        // Phase 12: get_addresses_active
+        const activeId = send("tools/call", {
+          name: "get_addresses_active",
+          arguments: {
+            addresses: [
+              "kaspa:qpauqsvk7yf9unexwmxsnmg547mhyga37csh0kj53q6xxgl24ydxjsgzthw5j",
+            ],
+          },
+        });
+        const activeResp = await waitFor(activeId);
+        if (!activeResp?.result?.content?.[0]?.text) throw new Error(`get_addresses_active failed: ${JSON.stringify(activeResp)}`);
+        const activeData = JSON.parse(activeResp.result.content[0].text);
+        if (!activeData.results || !Array.isArray(activeData.results)) throw new Error(`get_addresses_active error: missing results`);
+        console.log(`PASS get_addresses_active → ${activeData.results.length} results`);
+
         // Done
         notify("notifications/exit");
-        console.log(`\nAll 8 tests passed. Server works correctly against Kaspa mainnet.`);
+        console.log(`\nAll 12 tests passed. Server works correctly against Kaspa mainnet.`);
         proc.stdin.end();
         resolve();
       } catch (err) {

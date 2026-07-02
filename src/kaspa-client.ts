@@ -73,6 +73,23 @@ export interface TxModelResponse {
   accepting_block_time?: number;
 }
 
+export interface AddressBalanceHistoryEntry {
+  timestamp: number;
+  amount: number;
+}
+
+export interface AddressesActiveResponse {
+  address: string;
+  active: boolean;
+  lastTxBlockTime?: number;
+}
+
+export interface TransactionsPageResponse {
+  transactions: TxModelResponse[];
+  nextBefore?: string;
+  nextAfter?: string;
+}
+
 export class KaspaClientError extends Error {
   constructor(
     message: string,
@@ -190,4 +207,68 @@ export async function getBalancesBatch(
   addresses: string[],
 ): Promise<BalancesByAddressEntry[]> {
   return postJson<BalancesByAddressEntry[]>("/addresses/balances", { addresses });
+}
+
+export async function getAddressBalanceHistory(
+  address: string,
+  dayOrMonth: string,
+): Promise<AddressBalanceHistoryEntry[]> {
+  return fetchJson<AddressBalanceHistoryEntry[]>(
+    `/addresses/${address}/balance/${dayOrMonth}`,
+  );
+}
+
+export async function getUtxosBatch(
+  addresses: string[],
+): Promise<UtxoResponse[]> {
+  return postJson<UtxoResponse[]>("/addresses/utxos", { addresses });
+}
+
+export async function getAddressTransactionsPage(
+  address: string,
+  limit = 50,
+  before = 0,
+  after = 0,
+): Promise<TransactionsPageResponse> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+
+  try {
+    let path = `/addresses/${address}/full-transactions-page?limit=${limit}`;
+    if (before > 0) path += `&before=${before}`;
+    if (after > 0) path += `&after=${after}`;
+
+    const response = await fetch(`${BASE_URL}${path}`, {
+      signal: controller.signal,
+    });
+
+    if (!response.ok) {
+      throw new KaspaClientError(
+        `Kaspa API error: ${response.status} ${response.statusText}`,
+        response.status,
+      );
+    }
+
+    const transactions = (await response.json()) as TxModelResponse[];
+    const nextBefore = response.headers.get("X-Next-Page-Before");
+    const nextAfter = response.headers.get("X-Next-Page-After");
+
+    return { transactions, nextBefore: nextBefore ?? undefined, nextAfter: nextAfter ?? undefined };
+  } catch (err) {
+    if (err instanceof KaspaClientError) throw err;
+    if (err instanceof DOMException && err.name === "AbortError") {
+      throw new KaspaClientError("Kaspa API request timed out");
+    }
+    throw new KaspaClientError(
+      err instanceof Error ? err.message : "Unknown network error",
+    );
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+export async function getAddressesActive(
+  addresses: string[],
+): Promise<AddressesActiveResponse[]> {
+  return postJson<AddressesActiveResponse[]>("/addresses/active", { addresses });
 }
