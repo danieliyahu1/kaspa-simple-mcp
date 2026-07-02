@@ -43,7 +43,7 @@ server.tool(
       const tx = await getTransaction(txId);
       const totalSompi = tx.outputs.reduce((sum, o) => sum + o.amount, 0);
       const outputs = tx.outputs.slice(0, 5).map((o) => ({
-        recipient: o.script_public_key.address,
+        recipient: o.script_public_key_address,
         amount: sompiToKas(o.amount),
       }));
       const result: Record<string, unknown> = {

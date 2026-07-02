@@ -7,9 +7,7 @@ export interface BalanceResponse {
 
 export interface TransactionOutput {
   amount: number;
-  script_public_key: {
-    address: string;
-  };
+  script_public_key_address: string;
 }
 
 export interface TransactionResponse {
