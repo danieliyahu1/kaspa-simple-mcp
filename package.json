@@ -1,7 +1,7 @@
 {
   "name": "kaspa-simple-mcp",
-  "version": "0.7.0",
-  "description": "A read-only MCP server for Kaspa mainnet — balance, UTXOs, transactions, and network info.",
+  "version": "0.8.0",
+  "description": "A read-only MCP server for Kaspa mainnet — balance, UTXOs, transactions, network info, health, supply, hashrate, marketcap, and virtual chain.",
   "type": "module",
   "main": "dist/index.js",
   "bin": {

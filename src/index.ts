@@ -38,6 +38,14 @@ import {
   getHalvingInfo,
   getKaspadInfo,
   getVirtualChainBlueScore,
+  getCirculatingSupply,
+  getTotalSupply,
+  getMaxHashrate,
+  getHashrateHistory,
+  getHashrateHistorySamples,
+  getHealth,
+  getMarketcap,
+  getVirtualChain,
   KaspaClientError,
   type UtxoResponse,
   type SearchTransactionResult,
@@ -836,6 +844,151 @@ server.tool(
       const data = await getVirtualChainBlueScore();
       return {
         content: [{ type: "text", text: JSON.stringify(data, null, 2) }],
+      };
+    } catch (err) {
+      return formatError(err);
+    }
+  },
+);
+
+// --- Circulating Supply ---
+
+server.tool(
+  "get_circulating_supply",
+  {},
+  async () => {
+    try {
+      const data = await getCirculatingSupply();
+      return {
+        content: [{ type: "text", text: JSON.stringify(data, null, 2) }],
+      };
+    } catch (err) {
+      return formatError(err);
+    }
+  },
+);
+
+// --- Total Supply ---
+
+server.tool(
+  "get_total_supply",
+  {},
+  async () => {
+    try {
+      const data = await getTotalSupply();
+      return {
+        content: [{ type: "text", text: JSON.stringify(data, null, 2) }],
+      };
+    } catch (err) {
+      return formatError(err);
+    }
+  },
+);
+
+// --- Max Hashrate ---
+
+server.tool(
+  "get_max_hashrate",
+  {},
+  async () => {
+    try {
+      const data = await getMaxHashrate();
+      return {
+        content: [{ type: "text", text: JSON.stringify(data, null, 2) }],
+      };
+    } catch (err) {
+      return formatError(err);
+    }
+  },
+);
+
+// --- Hashrate History ---
+
+server.tool(
+  "get_hashrate_history",
+  {
+    dayOrMonth: z.string().regex(/^\d{4}-\d{2}(-\d{2})?$/).describe("UTC day (YYYY-MM-DD) or month (YYYY-MM)"),
+  },
+  async ({ dayOrMonth }) => {
+    try {
+      const entries = await getHashrateHistory(dayOrMonth);
+      return {
+        content: [{ type: "text", text: JSON.stringify({ dayOrMonth, count: entries.length, entries }, null, 2) }],
+      };
+    } catch (err) {
+      return formatError(err);
+    }
+  },
+);
+
+// --- Hashrate History Samples ---
+
+server.tool(
+  "get_hashrate_history_samples",
+  {
+    limit: z.number().int().min(1).max(5000).default(100).describe("Number of samples to return (max 5000)"),
+  },
+  async ({ limit }) => {
+    try {
+      const entries = await getHashrateHistorySamples(limit);
+      return {
+        content: [{ type: "text", text: JSON.stringify({ count: entries.length, entries }, null, 2) }],
+      };
+    } catch (err) {
+      return formatError(err);
+    }
+  },
+);
+
+// --- Health ---
+
+server.tool(
+  "get_health",
+  {},
+  async () => {
+    try {
+      const data = await getHealth();
+      return {
+        content: [{ type: "text", text: JSON.stringify(data, null, 2) }],
+      };
+    } catch (err) {
+      return formatError(err);
+    }
+  },
+);
+
+// --- Marketcap ---
+
+server.tool(
+  "get_marketcap",
+  {},
+  async () => {
+    try {
+      const data = await getMarketcap();
+      return {
+        content: [{ type: "text", text: JSON.stringify(data, null, 2) }],
+      };
+    } catch (err) {
+      return formatError(err);
+    }
+  },
+);
+
+// --- Virtual Chain ---
+
+server.tool(
+  "get_virtual_chain",
+  {
+    blueScoreGte: z.number().int().min(0).describe("Minimum blue score (inclusive)"),
+    limit: z.number().int().min(10).max(100).default(10).describe("Number of blocks to return (10-100)"),
+    resolveInputs: z.boolean().optional().default(false).describe("Resolve previous outpoints for inputs"),
+    includeCoinbase: z.boolean().optional().default(false).describe("Include coinbase transactions"),
+  },
+  async ({ blueScoreGte, limit, resolveInputs, includeCoinbase }) => {
+    try {
+      const blocks = await getVirtualChain(blueScoreGte, limit ?? 10, resolveInputs ?? false, includeCoinbase ?? false);
+      return {
+        content: [{ type: "text", text: JSON.stringify({ count: blocks.length, blocks }, null, 2) }],
       };
     } catch (err) {
       return formatError(err);

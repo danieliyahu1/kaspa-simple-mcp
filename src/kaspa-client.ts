@@ -644,3 +644,138 @@ export async function getKaspadInfo(): Promise<KaspadInfoResponse> {
 export async function getVirtualChainBlueScore(): Promise<BlueScoreResponse> {
   return fetchJson<BlueScoreResponse>("/info/virtual-chain-blue-score");
 }
+
+// --- Additional Info endpoints ---
+
+export interface CirculatingSupplyResponse {
+  circulatingSupply: string;
+}
+
+export async function getCirculatingSupply(): Promise<CirculatingSupplyResponse> {
+  const raw = await fetchJson<string>("/info/coinsupply/circulating");
+  return { circulatingSupply: raw };
+}
+
+export interface TotalSupplyResponse {
+  totalSupply: string;
+}
+
+export async function getTotalSupply(): Promise<TotalSupplyResponse> {
+  const raw = await fetchJson<string>("/info/coinsupply/total");
+  return { totalSupply: raw };
+}
+
+export interface MaxHashrateResponse {
+  hashrate: number;
+  blockheader: {
+    hash: string;
+    timestamp: string;
+    difficulty: number;
+    daaScore: string;
+    blueScore: string;
+  };
+}
+
+export async function getMaxHashrate(): Promise<MaxHashrateResponse> {
+  return fetchJson<MaxHashrateResponse>("/info/hashrate/max");
+}
+
+export interface HashrateHistoryEntry {
+  daaScore: number;
+  blueScore: number;
+  timestamp: number;
+  date_time: string;
+  bits: number;
+  difficulty: number;
+  hashrate_kh: number;
+}
+
+export async function getHashrateHistory(
+  dayOrMonth: string,
+): Promise<HashrateHistoryEntry[]> {
+  return fetchJson<HashrateHistoryEntry[]>(
+    `/info/hashrate/history/${dayOrMonth}`,
+  );
+}
+
+export async function getHashrateHistorySamples(
+  limit = 100,
+): Promise<HashrateHistoryEntry[]> {
+  return fetchJson<HashrateHistoryEntry[]>(
+    `/info/hashrate/history?limit=${limit}`,
+  );
+}
+
+export interface KaspadServerHealth {
+  kaspadHost: string;
+  serverVersion: string;
+  isUtxoIndexed: boolean;
+  isSynced: boolean;
+  p2pId: string;
+  blueScore: number;
+}
+
+export interface DatabaseHealth {
+  isSynced: boolean;
+  blueScore: number;
+  blueScoreDiff: number;
+  acceptedTxBlockTime: number;
+  acceptedTxBlockTimeDiff: number;
+}
+
+export interface HealthResponse {
+  kaspadServers: KaspadServerHealth[];
+  database: DatabaseHealth;
+}
+
+export async function getHealth(): Promise<HealthResponse> {
+  return fetchJson<HealthResponse>("/info/health");
+}
+
+export interface MarketcapResponse {
+  marketcap: number;
+}
+
+export async function getMarketcap(): Promise<MarketcapResponse> {
+  return fetchJson<MarketcapResponse>("/info/marketcap");
+}
+
+// --- Virtual Chain ---
+
+export interface VirtualChainTxOutput {
+  script_public_key: string;
+  script_public_key_address: string;
+  amount: number;
+}
+
+export interface VirtualChainTxInput {
+  previous_outpoint_hash: string;
+  previous_outpoint_index: number;
+  signature_script?: string;
+}
+
+export interface VirtualChainTransaction {
+  transaction_id: string;
+  is_accepted: boolean;
+  inputs?: VirtualChainTxInput[];
+  outputs: VirtualChainTxOutput[];
+}
+
+export interface VirtualChainBlock {
+  hash: string;
+  blue_score: number;
+  daa_score: number;
+  timestamp: number;
+  transactions: VirtualChainTransaction[];
+}
+
+export async function getVirtualChain(
+  blueScoreGte: number,
+  limit = 10,
+  resolveInputs = false,
+  includeCoinbase = false,
+): Promise<VirtualChainBlock[]> {
+  return fetchJson<VirtualChainBlock[]>(
+    `/virtual-chain?blueScoreGte=${blueScoreGte}&limit=${limit}&resolveInputs=${resolveInputs}&includeCoinbase=${includeCoinbase}`,
+  );
+}
