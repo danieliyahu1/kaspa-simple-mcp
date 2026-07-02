@@ -2,8 +2,7 @@ name: Publish to npm
 
 on:
   push:
-    tags:
-      - 'v*.*.*'
+    branches: [master]
   workflow_dispatch:
 
 jobs:
@@ -23,6 +22,13 @@ jobs:
 
       - run: npm run build
 
-      - run: npm publish
+      - name: Publish if version is new
+        run: |
+          CURRENT=$(node -p "require('./package.json').version")
+          if npm view kaspa-simple-mcp@"$CURRENT" version &>/dev/null; then
+            echo "Version $CURRENT already published — skipping"
+          else
+            npm publish
+          fi
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
