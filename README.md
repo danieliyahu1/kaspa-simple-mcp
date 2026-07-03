@@ -6,70 +6,39 @@ Built for use with MCP-compatible clients like [OpenCode](https://opencode.ai), 
 
 ## Features
 
-- **Balance lookup** — get the confirmed KAS balance for any address
-- **UTXO lookup** — get unspent transaction outputs for any address
-- **Transaction lookup** — get status, timestamp, total value, and top outputs for any transaction
-- **Transaction history** — get recent transactions for any address
-- **Transaction count** — count total transactions for an address
-- **UTXO count** — count total UTXOs for an address
-- **Batch balance** — check balances for up to 100 addresses at once
-- **Fee estimation** — get the current network priority fee rate
+- **Balance & UTXOs** — single, batch, and history for balances; single and batch UTXO queries
+- **Transactions** — lookup by ID, search, acceptance check, mass calculation, count, and history
+- **Addresses** — transactions, UTXOs, count, paginated history, active check, name resolution, distribution, top addresses
+- **Blocks** — single block, block range, blocks by blue score, virtual chain
+- **Network info** — DAG info, hashrate (current + history + samples), coin supply, price, block reward, halving, kaspad info, virtual chain blue score, health, marketcap, circulating & total supply, max hashrate
+- **Fee estimation** — current network priority fee rate
 
-All data comes from the public [api.kaspa.org](https://api.kaspa.org) (mainnet) or [api-tn10.kaspa.org](https://api-tn10.kaspa.org) (testnet-10) REST API. No API key needed. Read-only.
+All data comes from the public Kaspa REST API. No API key needed. Read-only.
 
 ## Installation
-
-### Via npm (recommended)
 
 ```bash
 npm install -g kaspa-simple-mcp
 ```
 
-### Via npx (no install)
+Or run directly with npx:
 
 ```bash
 npx kaspa-simple-mcp
 ```
 
-### From source
-
-```bash
-git clone https://github.com/danieliyahu1/kaspa-simple-mcp.git
-cd kaspa-simple-mcp
-npm install
-npm run build
-npm start
-```
-
 ## Network configuration
 
-By default the server queries **mainnet**. Set `KASPA_NETWORK` to switch:
+By default the server queries **mainnet**. Set the `KASPA_NETWORK` environment variable to switch:
 
 | Value | API URL |
 |---|---|
 | `mainnet` (default) | `https://api.kaspa.org` |
 | `testnet-10` | `https://api-tn10.kaspa.org` |
 
-## Usage
+### Client configuration examples
 
-### MCP client configuration
-
-The server communicates over **stdio**. Configure it as an MCP tool server in your client's settings.
-
-**OpenCode (`opencode.json`) — mainnet (default):**
-
-```json
-{
-  "mcp": {
-    "kaspa-simple-mcp": {
-      "command": "npx",
-      "args": ["-y", "kaspa-simple-mcp"]
-    }
-  }
-}
-```
-
-**OpenCode — testnet-10:**
+**OpenCode (`opencode.json`):**
 
 ```json
 {
@@ -85,20 +54,7 @@ The server communicates over **stdio**. Configure it as an MCP tool server in yo
 }
 ```
 
-**Claude Desktop (`claude_desktop_config.json`) — mainnet (default):**
-
-```json
-{
-  "mcpServers": {
-    "kaspa": {
-      "command": "npx",
-      "args": ["-y", "kaspa-simple-mcp"]
-    }
-  }
-}
-```
-
-**Claude Desktop — testnet-10:**
+**Claude Desktop (`claude_desktop_config.json`):**
 
 ```json
 {
@@ -114,204 +70,105 @@ The server communicates over **stdio**. Configure it as an MCP tool server in yo
 }
 ```
 
-## Tools
+Omit the `env` block to use mainnet.
 
-### `get_balance`
+## Tools reference
 
-Get the confirmed KAS balance for a Kaspa address.
+### Balance
 
-**Parameters:**
+| Tool | Params | Description |
+|------|--------|-------------|
+| `get_balance` | `address` | Confirmed KAS balance for an address |
+| `get_balances_batch` | `addresses` (array, 1–100) | Balances for up to 100 addresses |
+| `get_address_balance_history` | `address`, `dayOrMonth` | Daily or monthly balance history |
 
-| Name | Type | Description |
-|------|------|-------------|
-| `address` | string | Kaspa address (e.g., `kaspa:...` or `kaspatest:...`) |
+### UTXOs
 
-**Example response:**
+| Tool | Params | Description |
+|------|--------|-------------|
+| `get_address_utxos` | `address` | UTXOs for an address |
+| `get_address_utxo_count` | `address` | UTXO count for an address |
+| `get_utxos_batch` | `addresses` (array, 1–100) | UTXOs for up to 100 addresses |
 
-```json
-{ "balance": "1250.50000000" }
-```
+### Transactions
 
-### `get_transaction`
+| Tool | Params | Description |
+|------|--------|-------------|
+| `get_transaction` | `txId` | Transaction status, timestamp, total value, and top outputs |
+| `get_address_transactions` | `address`, `limit?`, `offset?` | Recent transactions for an address |
+| `get_address_transaction_count` | `address` | Total transaction count for an address |
+| `get_address_transactions_page` | `address`, `limit?`, `before?`, `after?` | Cursor-paginated transaction history |
+| `search_transactions` | `transactionIds?`, `acceptingBlueScoreGte?`, `acceptingBlueScoreLt?`, `resolvePreviousOutpoints?`, `acceptance?` | Search transactions by ID, blue score, or acceptance |
+| `get_transactions_acceptance` | `transactionIds` (array, 1–200) | Check if transactions were accepted |
+| `calculate_transaction_mass` | `version`, `inputs`, `outputs`, `lockTime?`, `subnetworkId?` | Compute transaction mass |
+| `get_transaction_count` | none | Current total transaction count |
+| `get_transaction_count_history` | `dayOrMonth` | Daily or monthly transaction counts |
 
-Look up a transaction by its ID.
+### Address info
 
-**Parameters:**
+| Tool | Params | Description |
+|------|--------|-------------|
+| `get_address_name` | `address` | Resolve address name |
+| `get_address_names` | none | List all known address names |
+| `get_addresses_active` | `addresses` (array, 1–100) | Check if addresses have been active |
+| `get_top_addresses` | none | Top addresses by balance |
+| `get_address_distribution` | none | Address balance distribution |
 
-| Name | Type | Description |
-|------|------|-------------|
-| `txId` | string | 64-char Kaspa transaction ID (hex) |
+### Active addresses
 
-**Example response:**
+| Tool | Params | Description |
+|------|--------|-------------|
+| `get_active_addresses_count` | none | Current active address count |
+| `get_active_addresses_count_history` | `dayOrMonth` | Daily or monthly active address history |
 
-```json
-{
-  "status": "confirmed",
-  "timestamp": 1700000000,
-  "totalKas": "500.00000000",
-  "outputs": [
-    { "recipient": "kaspa:...", "amount": "250.00000000" },
-    { "recipient": "kaspa:...", "amount": "250.00000000" }
-  ]
-}
-```
+### Blocks
 
-If the transaction has more than 5 outputs, a `moreOutputs` field indicates how many were omitted.
+| Tool | Params | Description |
+|------|--------|-------------|
+| `get_block` | `blockId`, `includeTransactions?`, `includeColor?` | Block details by hash |
+| `get_blocks` | `lowHash`, `includeBlocks?`, `includeTransactions?` | Block hashes from a starting hash |
+| `get_blocks_from_bluescore` | `blueScore?`, `blueScoreGte?`, `blueScoreLt?`, `includeTransactions?` | Blocks by blue score |
+| `get_virtual_chain` | `blueScoreGte`, `limit?`, `resolveInputs?`, `includeCoinbase?` | Virtual chain blocks from a blue score |
 
-### `get_fee_estimate`
+### Network info
 
-Get the current network priority fee rate.
-
-**Parameters:** None
-
-**Example response:**
-
-```json
-{ "feerate": "0.00000100" }
-```
-
-The fee rate is in KAS/KB — multiply by your estimated transaction size in KB to get the total fee.
-
-### `get_address_transactions`
-
-Get the most recent transactions for a Kaspa address.
-
-**Parameters:**
-
-| Name | Type | Default | Description |
-|------|------|---------|-------------|
-| `address` | string | — | Kaspa address |
-| `limit` | number | 50 | Max transactions to return (max 500) |
-| `offset` | number | 0 | Pagination offset |
-
-**Example response:**
-
-```json
-{
-  "address": "kaspa:...",
-  "count": 3,
-  "transactions": [
-    {
-      "txId": "abc...",
-      "status": "confirmed",
-      "timestamp": 1700000000,
-      "outputs": [{ "recipient": "kaspa:...", "amount": "100.00000000" }]
-    }
-  ]
-}
-```
-
-### `get_address_transaction_count`
-
-Get the total number of transactions associated with an address.
-
-**Parameters:**
-
-| Name | Type | Description |
-|------|------|-------------|
-| `address` | string | Kaspa address |
-
-**Example response:**
-
-```json
-{ "address": "kaspa:...", "totalTransactions": 42 }
-```
-
-### `get_address_utxo_count`
-
-Get the total number of unspent outputs for an address.
-
-**Parameters:**
-
-| Name | Type | Description |
-|------|------|-------------|
-| `address` | string | Kaspa address |
-
-**Example response:**
-
-```json
-{ "address": "kaspa:...", "totalUtxos": 7 }
-```
-
-### `get_balances_batch`
-
-Get balances for up to 100 addresses in a single request.
-
-**Parameters:**
-
-| Name | Type | Description |
-|------|------|-------------|
-| `addresses` | string[] | Array of Kaspa addresses (1–100) |
-
-**Example response:**
-
-```json
-[
-  { "address": "kaspa:...", "balance": "100.00000000" },
-  { "address": "kaspa:...", "balance": "50.00000000" }
-]
-```
-
-## Examples
-
-**Check a balance:**
-```
-Agent: get_balance for kaspa:qpauqsvk7yf9unexwmxsnmg547mhyga37csh0kj53q6xxgl24ydxjsgzthw5j
-Agent: The balance is 100.00000000 KAS.
-```
-
-**Look up a transaction:**
-```
-Agent: get_transaction for b2a4c3e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2
-Agent: Transaction is confirmed with 500 KAS total.
-```
-
-**Get transaction history:**
-```
-Agent: get_address_transactions for kaspa:qpauqsvk7yf9unexwmxsnmg547mhyga37csh0kj53q6xxgl24ydxjsgzthw5j, limit 5
-Agent: Found 3 transactions, the most recent was confirmed with 100 KAS.
-```
-
-**Batch check balances:**
-```
-Agent: get_balances_batch for [address1, address2]
-Agent: address1 has 100 KAS, address2 has 50 KAS.
-```
-
-**Estimate fees:**
-```
-Agent: What's the current fee estimate?
-Agent: Current priority fee rate is 0.00000100 KAS/KB.
-```
+| Tool | Params | Description |
+|------|--------|-------------|
+| `get_blockdag_info` | none | DAG statistics (tips, difficulty, etc.) |
+| `get_hashrate` | none | Current network hashrate |
+| `get_hashrate_history` | `dayOrMonth` | Daily or monthly hashrate history |
+| `get_hashrate_history_samples` | `limit?` | Recent hashrate samples |
+| `get_coin_supply` | none | Coin supply details |
+| `get_circulating_supply` | none | Circulating supply |
+| `get_total_supply` | none | Total supply |
+| `get_max_hashrate` | none | Maximum historical hashrate |
+| `get_price` | none | Current KAS price |
+| `get_marketcap` | none | Current market cap |
+| `get_block_reward` | none | Current block reward |
+| `get_halving_info` | none | Halving schedule |
+| `get_kaspad_info` | none | Kaspad node info |
+| `get_virtual_chain_blue_score` | none | Current virtual chain blue score |
+| `get_health` | none | API health check |
+| `get_fee_estimate` | none | Current priority fee rate |
 
 ## Output characteristics
 
 - All monetary values returned in **KAS** (not sompi), as strings with 8 decimal places
-- Responses are **deterministic JSON** structures — easy for LLMs to parse
+- Responses are deterministic JSON — easy for LLMs to parse
 - Errors include descriptive messages
 - No authentication required
 
 ## Development
 
 ```bash
-# Build
 npm run build
 
 # Test against mainnet (default)
 node test_integration.mjs
 
 # Test against testnet-10
-KASPA_NETWORK=testnet-10 node test_integration.mjs
+$env:KASPA_NETWORK="testnet-10"; node test_integration.mjs
 ```
-
-## Publishing
-
-```bash
-npm login
-npm publish
-```
-
-Make sure you're logged into the npm registry first. The `prepublishOnly` script runs the TypeScript build automatically.
 
 ## License
 
