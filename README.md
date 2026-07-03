@@ -1,12 +1,12 @@
 # kaspa-simple-mcp
 
-A read-only [Model Context Protocol (MCP)](https://modelcontextprotocol.io) server for the Kaspa blockchain mainnet. Lets AI agents query Kaspa data through simple, deterministic tools — no node required.
+A read-only [Model Context Protocol (MCP)](https://modelcontextprotocol.io) server for the Kaspa blockchain. Lets AI agents query Kaspa data through simple, deterministic tools — no node required.
 
 Built for use with MCP-compatible clients like [OpenCode](https://opencode.ai), Claude, Cursor, and others.
 
 ## Features
 
-- **Balance lookup** — get the confirmed KAS balance for any mainnet address
+- **Balance lookup** — get the confirmed KAS balance for any address
 - **UTXO lookup** — get unspent transaction outputs for any address
 - **Transaction lookup** — get status, timestamp, total value, and top outputs for any transaction
 - **Transaction history** — get recent transactions for any address
@@ -15,7 +15,7 @@ Built for use with MCP-compatible clients like [OpenCode](https://opencode.ai), 
 - **Batch balance** — check balances for up to 100 addresses at once
 - **Fee estimation** — get the current network priority fee rate
 
-All data comes from the public [api.kaspa.org](https://api.kaspa.org) REST API. No API key needed. Read-only. Mainnet only.
+All data comes from the public [api.kaspa.org](https://api.kaspa.org) (mainnet) or [api-tn10.kaspa.org](https://api-tn10.kaspa.org) (testnet-10) REST API. No API key needed. Read-only.
 
 ## Installation
 
@@ -41,13 +41,22 @@ npm run build
 npm start
 ```
 
+## Network configuration
+
+By default the server queries **mainnet**. Set `KASPA_NETWORK` to switch:
+
+| Value | API URL |
+|---|---|
+| `mainnet` (default) | `https://api.kaspa.org` |
+| `testnet-10` | `https://api-tn10.kaspa.org` |
+
 ## Usage
 
 ### MCP client configuration
 
 The server communicates over **stdio**. Configure it as an MCP tool server in your client's settings.
 
-**OpenCode (`opencode.json`):**
+**OpenCode (`opencode.json`) — mainnet (default):**
 
 ```json
 {
@@ -60,7 +69,23 @@ The server communicates over **stdio**. Configure it as an MCP tool server in yo
 }
 ```
 
-**Claude Desktop (`claude_desktop_config.json`):**
+**OpenCode — testnet-10:**
+
+```json
+{
+  "mcp": {
+    "kaspa-simple-mcp": {
+      "command": "npx",
+      "args": ["-y", "kaspa-simple-mcp"],
+      "env": {
+        "KASPA_NETWORK": "testnet-10"
+      }
+    }
+  }
+}
+```
+
+**Claude Desktop (`claude_desktop_config.json`) — mainnet (default):**
 
 ```json
 {
@@ -73,17 +98,33 @@ The server communicates over **stdio**. Configure it as an MCP tool server in yo
 }
 ```
 
+**Claude Desktop — testnet-10:**
+
+```json
+{
+  "mcpServers": {
+    "kaspa": {
+      "command": "npx",
+      "args": ["-y", "kaspa-simple-mcp"],
+      "env": {
+        "KASPA_NETWORK": "testnet-10"
+      }
+    }
+  }
+}
+```
+
 ## Tools
 
 ### `get_balance`
 
-Get the confirmed KAS balance for a Kaspa mainnet address.
+Get the confirmed KAS balance for a Kaspa address.
 
 **Parameters:**
 
 | Name | Type | Description |
 |------|------|-------------|
-| `address` | string | Kaspa mainnet address (e.g., `kaspa:...`) |
+| `address` | string | Kaspa address (e.g., `kaspa:...` or `kaspatest:...`) |
 
 **Example response:**
 
@@ -139,7 +180,7 @@ Get the most recent transactions for a Kaspa address.
 
 | Name | Type | Default | Description |
 |------|------|---------|-------------|
-| `address` | string | — | Kaspa mainnet address |
+| `address` | string | — | Kaspa address |
 | `limit` | number | 50 | Max transactions to return (max 500) |
 | `offset` | number | 0 | Pagination offset |
 
@@ -168,7 +209,7 @@ Get the total number of transactions associated with an address.
 
 | Name | Type | Description |
 |------|------|-------------|
-| `address` | string | Kaspa mainnet address |
+| `address` | string | Kaspa address |
 
 **Example response:**
 
@@ -184,7 +225,7 @@ Get the total number of unspent outputs for an address.
 
 | Name | Type | Description |
 |------|------|-------------|
-| `address` | string | Kaspa mainnet address |
+| `address` | string | Kaspa address |
 
 **Example response:**
 
@@ -200,7 +241,7 @@ Get balances for up to 100 addresses in a single request.
 
 | Name | Type | Description |
 |------|------|-------------|
-| `addresses` | string[] | Array of Kaspa mainnet addresses (1–100) |
+| `addresses` | string[] | Array of Kaspa addresses (1–100) |
 
 **Example response:**
 
@@ -248,7 +289,7 @@ Agent: Current priority fee rate is 0.00000100 KAS/KB.
 - All monetary values returned in **KAS** (not sompi), as strings with 8 decimal places
 - Responses are **deterministic JSON** structures — easy for LLMs to parse
 - Errors include descriptive messages
-- No authentication or configuration required
+- No authentication required
 
 ## Development
 
@@ -256,8 +297,11 @@ Agent: Current priority fee rate is 0.00000100 KAS/KB.
 # Build
 npm run build
 
-# Test against mainnet
+# Test against mainnet (default)
 node test_integration.mjs
+
+# Test against testnet-10
+KASPA_NETWORK=testnet-10 node test_integration.mjs
 ```
 
 ## Publishing
