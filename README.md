@@ -15,6 +15,8 @@ Built for use with MCP-compatible clients like [OpenCode](https://opencode.ai), 
 
 All data comes from the public Kaspa REST API. No API key needed. Read-only.
 
+This is a thin wrapper around the Kaspa public API hosted at [api.kaspa.org](https://api.kaspa.org). All credit for the underlying blockchain data and infrastructure goes to the Kaspa team and community.
+
 ## Installation
 
 ```bash
