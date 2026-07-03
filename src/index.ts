@@ -63,7 +63,7 @@ const server = new McpServer({
 server.tool(
   "get_balance",
   {
-    address: z.string().describe("Kaspa mainnet address"),
+    address: z.string().describe("Kaspa address"),
   },
   async ({ address }) => {
     try {
@@ -80,7 +80,7 @@ server.tool(
 server.tool(
   "get_address_utxos",
   {
-    address: z.string().describe("Kaspa mainnet address"),
+    address: z.string().describe("Kaspa address"),
   },
   async ({ address }) => {
     try {
@@ -167,7 +167,7 @@ server.tool(
 server.tool(
   "get_address_transactions",
   {
-    address: z.string().describe("Kaspa mainnet address"),
+    address: z.string().describe("Kaspa address"),
     limit: z.number().min(1).max(500).default(50).describe("Number of transactions (max 500)"),
     offset: z.number().min(0).default(0).describe("Offset for pagination"),
   },
@@ -195,7 +195,7 @@ server.tool(
 server.tool(
   "get_address_transaction_count",
   {
-    address: z.string().describe("Kaspa mainnet address"),
+    address: z.string().describe("Kaspa address"),
   },
   async ({ address }) => {
     try {
@@ -212,7 +212,7 @@ server.tool(
 server.tool(
   "get_address_utxo_count",
   {
-    address: z.string().describe("Kaspa mainnet address"),
+    address: z.string().describe("Kaspa address"),
   },
   async ({ address }) => {
     try {
@@ -229,7 +229,7 @@ server.tool(
 server.tool(
   "get_balances_batch",
   {
-    addresses: z.array(z.string()).min(1).max(100).describe("Array of Kaspa mainnet addresses"),
+    addresses: z.array(z.string()).min(1).max(100).describe("Array of Kaspa addresses"),
   },
   async ({ addresses }) => {
     try {
@@ -250,7 +250,7 @@ server.tool(
 server.tool(
   "get_address_balance_history",
   {
-    address: z.string().describe("Kaspa mainnet address"),
+    address: z.string().describe("Kaspa address"),
     dayOrMonth: z.string().regex(/^\d{4}-\d{2}(-\d{2})?$/).describe("UTC day (YYYY-MM-DD) or month (YYYY-MM)"),
   },
   async ({ address, dayOrMonth }) => {
@@ -272,7 +272,7 @@ server.tool(
 server.tool(
   "get_utxos_batch",
   {
-    addresses: z.array(z.string()).min(1).max(100).describe("Array of Kaspa mainnet addresses"),
+    addresses: z.array(z.string()).min(1).max(100).describe("Array of Kaspa addresses"),
   },
   async ({ addresses }) => {
     try {
@@ -310,7 +310,7 @@ server.tool(
 server.tool(
   "get_address_transactions_page",
   {
-    address: z.string().describe("Kaspa mainnet address"),
+    address: z.string().describe("Kaspa address"),
     limit: z.number().min(1).max(500).default(50).describe("Max records per page (max 500)"),
     before: z.number().min(0).optional().describe("Only include transactions with block time before this epoch-millis"),
     after: z.number().min(0).optional().describe("Only include transactions with block time after this epoch-millis"),
@@ -350,7 +350,7 @@ server.tool(
 server.tool(
   "get_addresses_active",
   {
-    addresses: z.array(z.string()).min(1).max(100).describe("Array of Kaspa mainnet addresses"),
+    addresses: z.array(z.string()).min(1).max(100).describe("Array of Kaspa addresses"),
   },
   async ({ addresses }) => {
     try {
@@ -372,7 +372,7 @@ server.tool(
 server.tool(
   "get_address_name",
   {
-    address: z.string().describe("Kaspa mainnet address"),
+    address: z.string().describe("Kaspa address"),
   },
   async ({ address }) => {
     try {

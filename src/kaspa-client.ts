@@ -1,4 +1,16 @@
-const BASE_URL = "https://api.kaspa.org";
+const NETWORK_URLS: Record<string, string> = {
+  mainnet: "https://api.kaspa.org",
+  "testnet-10": "https://api-tn10.kaspa.org",
+};
+
+const network = process.env.KASPA_NETWORK ?? "mainnet";
+const BASE_URL = NETWORK_URLS[network];
+if (!BASE_URL) {
+  throw new Error(
+    `Unknown KASPA_NETWORK "${network}". Valid values: ${Object.keys(NETWORK_URLS).join(", ")}`,
+  );
+}
+
 const TIMEOUT_MS = 10_000;
 
 export interface BalanceResponse {
